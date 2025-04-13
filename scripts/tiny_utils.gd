@@ -1,6 +1,4 @@
 extends Object
-## Utility functions
-
 
 static func bbcode_escape(p_text: String) -> String:
 	return p_text \
@@ -34,17 +32,6 @@ static func get_method_info(p_callable: Callable) -> Dictionary:
 		if m.name == p_callable.get_method():
 			method_info = m
 			break
-	if !method_info and p_callable.is_custom():
-		var args: Array
-		var default_args: Array
-		for i in p_callable.get_argument_count():
-			var argument: Dictionary
-			argument["name"] = "arg%d" % i
-			argument["type"] = TYPE_NIL
-			args.push_back(argument)
-		method_info["name"] = "<anonymous lambda>"
-		method_info["args"] = args
-		method_info["default_args"] = default_args
 	return method_info
 
 
@@ -106,14 +93,3 @@ static func _calculate_osa_distance(s1: String, s2: String) -> int:
 		row1 = row2
 		row2 = tmp
 	return row1[s2_len]
-
-
-## Returns true, if a string is constructed of one or more space-separated valid
-## command identifiers ("command" or "command sub1 sub2").
-## A valid command identifier may contain only letters, digits, and underscores (_),
-## and the first character may not be a digit.
-static func is_valid_command_sequence(p_string: String) -> bool:
-	for part in p_string.split(' '):
-		if not part.is_valid_ascii_identifier():
-			return false
-	return true

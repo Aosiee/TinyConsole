@@ -2,13 +2,13 @@
 
 importer="font_data_dynamic"
 type="FontFile"
-uid="uid://dhm45nttm5i3s"
-path="res://.godot/imported/monaspace_argon_italic.otf-69d64783adde526699a99a191cd14ed6.fontdata"
+uid="uid://bad0nddkqe1lt"
+path="res://.godot/imported/Tiny5-Regular.ttf-0f1fa86d7244a285431345e630d6d033.fontdata"
 
 [deps]
 
-source_file="res://addons/limbo_console/res/fonts/monaspace_argon_italic.otf"
-dest_files=["res://.godot/imported/monaspace_argon_italic.otf-69d64783adde526699a99a191cd14ed6.fontdata"]
+source_file="res://addons/tiny_console/res/Tiny5-Regular.ttf"
+dest_files=["res://.godot/imported/Tiny5-Regular.ttf-0f1fa86d7244a285431345e630d6d033.fontdata"]
 
 [params]
 
@@ -22,7 +22,7 @@ msdf_size=48
 allow_system_fallback=true
 force_autohinter=false
 hinting=1
-subpixel_positioning=1
+subpixel_positioning=4
 keep_rounding_remainders=true
 oversampling=0.0
 Fallbacks=null

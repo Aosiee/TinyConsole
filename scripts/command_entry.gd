@@ -48,7 +48,7 @@ func _input(event: InputEvent) -> void:
 	if not has_focus():
 		return
 	if event is InputEventKey:
-		if event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
+		if event.keycode == KEY_ENTER:
 			if event.is_pressed():
 				submit_text()
 			get_viewport().set_input_as_handled()
@@ -80,6 +80,7 @@ func _draw() -> void:
 
 func submit_text() -> void:
 	text_submitted.emit(text)
+	clear()
 
 
 func _hide_scrollbars() -> void:
@@ -103,7 +104,7 @@ class CommandEntryHighlighter extends SyntaxHighlighter:
 				break
 			end += 1
 		command = text.substr(0, end).strip_edges()
-		command_color = command_found_color if LimboConsole.has_command(command) or LimboConsole.has_alias(command) else command_not_found_color
+		command_color = command_found_color if TinyConsole.has_command(command) or TinyConsole.has_alias(command) else command_not_found_color
 
 		return {
 			0: {"color": command_color},

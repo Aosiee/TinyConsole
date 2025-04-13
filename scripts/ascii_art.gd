@@ -189,17 +189,15 @@ const unsupported_char := """
 ▒░▒
 """
 
-
 static func str_to_boxed_art(p_text: String) -> PackedStringArray:
 	var lines: PackedStringArray = []
 	lines.resize(2)
 	for c in p_text:
 		var ascii: String = boxed_map.get(c.to_lower(), unsupported_char)
-		var parts: PackedStringArray = ascii.split('\n')
-		lines[0] += parts[1]
-		lines[1] += parts[2]
+		var parts: PackedStringArray = ascii.strip_edges().split('\n')
+		for i in range(2):
+			lines[i] += parts[i]
 	return lines
-
 
 static func is_boxed_art_supported(p_text: String) -> bool:
 	for c in p_text:
