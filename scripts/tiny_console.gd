@@ -151,12 +151,12 @@ func _input(p_event: InputEvent) -> void:
 func _process(delta: float) -> void:
 	var done_sliding := false
 	if _is_opening:
-		_open_t = move_toward(_open_t, 1.0, _open_speed * delta)
-		if _open_t == 1:
+		_open_t = move_toward(_open_t, 1.0, _open_speed * delta * 1.0/Engine.time_scale)
+		if _open_t == 1.0:
 			done_sliding = true
 	else: # We close faster than opening.
-		_open_t = move_toward(_open_t, 0.0, _open_speed * delta * 1.5)
-		if _open_t == 0:
+		_open_t = move_toward(_open_t, 0.0, _open_speed * delta * 1.5 * 1.0/Engine.time_scale)
+		if is_zero_approx(_open_t):
 			done_sliding = true
 
 	var eased := ease(_open_t, -1.75)
@@ -197,6 +197,14 @@ func clear_console() -> void:
 	_output.text = ""
 	_log_lines.clear()
 	scroll_to_bottom()
+
+## Erases the history that is persisted to the disk
+func erase_history() -> void:
+	_history.clear()
+	var file := FileAccess.open(CommandHistory.HISTORY_FILE, FileAccess.WRITE)
+	if file:
+		file.store_string("")
+		file.close()
 
 ## Prints an info message to the console and the output.
 func info(p_line: String, stdout : bool = true) -> void:
