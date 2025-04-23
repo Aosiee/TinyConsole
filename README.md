@@ -2,12 +2,12 @@
 ---
 ![Limbo Console](.github/demonstration.gif)
 
-![Static Badge](https://img.shields.io/badge/Godot-4.3-blue?style=flat)
+![Static Badge](https://img.shields.io/badge/Godot-4.4-blue?style=flat)
 [![GitHub License](https://img.shields.io/github/license/limbonaut/limbo_console)](https://github.com/limbonaut/limbo_console/blob/master/LICENSE.md)
 
 This is a **Limbo Console** Fork, support the original [**here**](https://github.com/limbonaut/limbo_console/tree/master)
 
-Notable **differences** from original, virtualized console log, nested command categories, added scroll modifiers, & re-themed visuals
+Notable **differences** from original, virtualized console log, nested command categories, added scroll modifiers, command line argument support, & re-themed visuals
 
 A simple and easy-to-use in-game dev console with a command interpreter for Godot Engine 4.
 
@@ -95,6 +95,9 @@ This is not a complete list. For the rest, check out `tiny_console.gd`.
 - `Scroll Wheel + Shift` — Fast scroll
 - `Scroll Wheel + Ctrl` — Speed scroll
 - `Scroll Wheel + Shift + Ctrl` — Super speed scroll
+
+### Command Line Arguments
+- `--enableConsole` — Force enables console, even if `disabled-in-release` (Can be disabled in config)
 
 ### Configuration
 Options can be modified in the project-specific configuration file located at `res://addons/tiny_console.cfg`. This file is stored outside the plugin's directory to support adding the plugin as a Git submodule.
