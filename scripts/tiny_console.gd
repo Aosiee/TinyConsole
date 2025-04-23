@@ -4,7 +4,6 @@ extends CanvasLayer
 signal toggled(is_shown)
 
 const THEME_DEFAULT := "res://addons/tiny_console/res/console_theme.tres"
-const HISTORY_FILE := "user://tiny_console_history.log"
 
 const AsciiArt := preload("res://addons/tiny_console/scripts/ascii_art.gd")
 const BuiltInCommands := preload("res://addons/tiny_console/scripts/built_in_commands.gd")
@@ -12,6 +11,8 @@ const CommandEntry := preload("res://addons/tiny_console/scripts/command_entry.g
 const ConfigMapper := preload("res://addons/tiny_console/scripts/config_mapper.gd")
 const ConsoleOptions := preload("res://addons/tiny_console/scripts/console_options.gd")
 const TinyUtil := preload("res://addons/tiny_console/scripts/tiny_utils.gd")
+const CommandHistory := preload("res://addons/tiny_console/scripts/command_history.gd")
+const HistoryGui := preload("res://addons/tiny_console/scripts/history_gui.gd")
 
 ## If false, prevents console from being shown. Commands can still be executed from code.
 var enabled: bool = true:
@@ -19,11 +20,12 @@ var enabled: bool = true:
 		enabled = value
 		set_process_input(enabled)
 		if not enabled and _control.visible:
-			_is_opening = false
+			_is_open = false
 			set_process(false)
 			_hide_console()
 
 var _control : Control
+var _history_gui: HistoryGui
 var _control_block : Control
 var _scroll_container : ScrollContainer
 var _vbox : VBoxContainer
@@ -61,7 +63,8 @@ var _commands = [] # command_name => Callable
 var _aliases : Dictionary # alias_name => command_to_run: PackedStringArray
 var _command_descriptions : Dictionary # command_name => description_text
 var _argument_autocomplete_sources: Dictionary # [command_name, arg_idx] => Callable
-var _history: PackedStringArray
+var _history: CommandHistory
+var _history_iter: CommandHistory.WrappingIterator
 var _hist_idx: int = -1
 var _autocomplete_matches: PackedStringArray
 var _eval_inputs: Dictionary
@@ -70,7 +73,7 @@ var _was_already_paused: bool = false
 
 var _open_t: float = 0.0
 var _open_speed: float = 5.0
-var _is_opening: bool = false
+var _is_open: bool = false
 
 func _init() -> void:
 	layer = 9999
@@ -79,15 +82,17 @@ func _init() -> void:
 	_options = ConsoleOptions.new()
 	ConfigMapper.load_from_config(_options)
 
+	_history = CommandHistory.new()
+	if _options.persistant_history:
+		_history.load()
+	_history_iter = _history.create_iterator()
+
 	_build_gui()
 	_init_theme()
 	_control.hide()
 	_control_block.hide()
 
 	_open_speed = _options.animation_speed
-
-	if _options.persistant_history:
-		_load_history()
 
 	if _options.disable_in_release:
 		enabled = OS.is_debug_build()
@@ -117,40 +122,71 @@ func _ready() -> void:
 	
 func _exit_tree() -> void:
 	if _options.persistant_history:
-		_save_history()
+		_history.trim(_options.max_log_storage)
+		_history.save()
 		
+func _handle_command_input(p_event: InputEvent) -> void:
+	var handled := true
+	if not _is_open:
+		pass  # Don't accept input while closing console.
+	elif p_event.keycode == KEY_UP:
+		_fill_entry(_history_iter.prev())
+		_clear_autocomplete()
+		_update_autocomplete()
+	elif p_event.keycode == KEY_DOWN:
+		_fill_entry(_history_iter.next())
+		_clear_autocomplete()
+		_update_autocomplete()
+	elif p_event.keycode == KEY_TAB and p_event.shift_pressed:
+		_reverse_autocomplete()
+	elif p_event.keycode == KEY_TAB:
+		_autocomplete()
+	elif p_event.keycode == KEY_PAGEUP:
+		var scroll_bar: VScrollBar = _output.get_v_scroll_bar()
+		scroll_bar.value -= scroll_bar.page
+	elif p_event.keycode == KEY_PAGEDOWN:
+		var scroll_bar: VScrollBar = _output.get_v_scroll_bar()
+		scroll_bar.value += scroll_bar.page
+	else:
+		handled = false
+	if handled:
+		get_viewport().set_input_as_handled()
+
+
+func _handle_history_input(p_event: InputEvent):
+	# Allow tab complete (reverse)
+	if p_event.is_action_pressed("tiny_auto_complete_reverse"):
+		_reverse_autocomplete()
+		get_viewport().set_input_as_handled()
+	# Allow tab complete (forward)
+	elif p_event.keycode == KEY_TAB and p_event.is_pressed():
+		_autocomplete()
+		get_viewport().set_input_as_handled()
+	# Perform search
+	elif p_event is InputEventKey:
+		_history_gui.search(_entry.text)
+		_entry.grab_focus()
+
+	# Make sure entry is always focused
+	_entry.grab_focus()
+
+
 func _input(p_event: InputEvent) -> void:
-	if p_event.is_echo():
-		return
 	if p_event.is_action_pressed("tiny_console_toggle"):
 		toggle_console()
 		get_viewport().set_input_as_handled()
+	# Check to see if the history gui should open
+	elif _control.visible and p_event.is_action_pressed("tiny_console_search_history"):
+		toggle_history()
+		get_viewport().set_input_as_handled()
+	elif _history_gui.visible and p_event is InputEventKey:
+		_handle_history_input(p_event)
 	elif _control.visible and p_event is InputEventKey and p_event.is_pressed():
-		var handled := true
-		if not _is_opening:
-			pass # Don't accept input while closing console.
-		elif p_event.keycode == KEY_UP:
-			_hist_idx += 1
-			_fill_entry_from_history()
-		elif p_event.keycode == KEY_DOWN:
-			_hist_idx -= 1
-			_fill_entry_from_history()
-		elif p_event.keycode == KEY_TAB:
-			_autocomplete()
-		elif p_event.keycode == KEY_PAGEUP:
-			var scroll_bar: VScrollBar = _output.get_v_scroll_bar()
-			scroll_bar.value -= scroll_bar.page
-		elif p_event.keycode == KEY_PAGEDOWN:
-			var scroll_bar: VScrollBar = _output.get_v_scroll_bar()
-			scroll_bar.value += scroll_bar.page
-		else:
-			handled = false
-		if handled:
-			get_viewport().set_input_as_handled()
+		_handle_command_input(p_event)
 
 func _process(delta: float) -> void:
 	var done_sliding := false
-	if _is_opening:
+	if _is_open:
 		_open_t = move_toward(_open_t, 1.0, _open_speed * delta * 1.0/Engine.time_scale)
 		if _open_t == 1.0:
 			done_sliding = true
@@ -165,7 +201,7 @@ func _process(delta: float) -> void:
 
 	if done_sliding:
 		set_process(false)
-		if not _is_opening:
+		if not _is_open:
 			_hide_console()
 			
 ########################
@@ -173,24 +209,35 @@ func _process(delta: float) -> void:
 ########################
 func open_console() -> void:
 	if enabled:
-		_is_opening = true
+		_is_open = true
 		set_process(true)
 		_show_console()
 		
 func close_console() -> void:
 	if enabled:
-		_is_opening = false
+		_is_open = false
 		set_process(true)
+		_history_gui.visible = false
+		if _options.persistant_history:
+			_history.save()
 		# _hide_console() is called in _process()
+
 		
 func is_visible() -> bool:
-	return _control.visible
+	return _is_open
 
 func toggle_console() -> void:
-	if _is_opening:
+	if _is_open:
 		close_console()
 	else:
 		open_console()
+
+func toggle_history() -> void:
+	_history_gui.set_visibility(not _history_gui.visible)
+	# Whenever the history gui becomes visible, make sure it has the latest
+	# history and do an initial search
+	if _history_gui.visible:
+		_history_gui.search(_entry.text)
 
 ## Clears all messages in the console.
 func clear_console() -> void:
@@ -251,7 +298,7 @@ func print_line(p_line: String, stdout: bool = true) -> void:
 
 	_redraw_visible_lines()
 
-	if stdout and not p_line.is_empty():
+	if stdout and not p_line.is_empty() and _options.print_to_stdout:
 		print(TinyUtil.bbcode_strip(p_line))
 
 ## Registers a new command for the specified callable. [br]
@@ -263,6 +310,9 @@ func register_command(p_func: Callable, p_name: String = "", p_desc: String = ""
 	var name: String = p_name
 	if name.is_empty():
 		name = p_func.get_method().trim_prefix("_").trim_prefix("cmd_")
+	
+	if _options.commands_disabled_in_release.has(name):
+		return
 	
 	if _commands != null:
 		for data in _commands:
@@ -392,7 +442,7 @@ func execute_command(p_command_line: String, p_silent: bool = false) -> void:
 	_silent = p_silent
 	if not p_silent:
 		var history_line: String = " ".join(argv)
-		_push_history(history_line)
+		_history.push_entry(history_line)
 		info("[color=%s][b]>[/b] %s[/color] %s" %
 				[_output_command_color.to_html(), argv[0], " ".join(argv.slice(1))])
 
@@ -591,7 +641,10 @@ func _build_gui() -> void:
 
 	# Optional console transparency
 	_control.modulate = Color(1.0, 1.0, 1.0, _options.opacity)
-
+	
+	_history_gui = HistoryGui.new(_history)
+	_output.add_child(_history_gui)
+	_history_gui.visible = false
 
 func _init_theme() -> void:
 	var theme: Theme
@@ -656,32 +709,6 @@ func _run_autoexec_script() -> void:
 		FileAccess.open(_options.autoexec_script, FileAccess.WRITE)
 	if FileAccess.file_exists(_options.autoexec_script):
 		execute_script(_options.autoexec_script)
-
-
-func _load_history() -> void:
-	var file := FileAccess.open(HISTORY_FILE, FileAccess.READ)
-	if not file:
-		return
-	while not file.eof_reached():
-		var line: String = file.get_line().strip_edges()
-		if not line.is_empty():
-			_history.append(line)
-	file.close()
-
-
-func _save_history() -> void:
-	# Trim history first
-	var max_lines: int = maxi(_options.max_lines, 0)
-	if _history.size() > max_lines:
-		_history = _history.slice(_history.size() - max_lines)
-
-	var file := FileAccess.open(HISTORY_FILE, FileAccess.WRITE)
-	if not file:
-		push_error("TinyConsole: Failed to save console history to file: ", HISTORY_FILE)
-		return
-	for line in _history:
-		file.store_line(line)
-	file.close()
 
 ###############
 ### PARSING ###
@@ -843,6 +870,14 @@ func _autocomplete() -> void:
 		_autocomplete_matches.push_back(match)
 		_update_autocomplete()
 
+func _reverse_autocomplete():
+	if not _autocomplete_matches.is_empty():
+		var match_str = _autocomplete_matches[_autocomplete_matches.size() - 1]
+		_autocomplete_matches.remove_at(_autocomplete_matches.size() - 1)
+		_autocomplete_matches.insert(0, match_str)
+		match_str = _autocomplete_matches[_autocomplete_matches.size() - 1]
+		_fill_entry(match_str)
+		_update_autocomplete()
 
 ## Updates autocomplete suggestions and hint based on user input.
 func _update_autocomplete() -> void:
@@ -876,9 +911,11 @@ func _update_autocomplete() -> void:
 				matches.sort()
 				_autocomplete_matches.append_array(matches)
 			# History
-			for i in range(_history.size() - 1, -1, -1):
-				if _history[i].begins_with(_entry.text):
-					_autocomplete_matches.append(_history[i])
+			if _options.autocomplete_use_history_with_matches or \
+			 		len(_autocomplete_matches) == 0:
+				for i in range(_history.size() - 1, -1, -1):
+					if _history.get_entry(i).begins_with(_entry.text):
+						_autocomplete_matches.append(_history.get_entry(i))
 
 	if _autocomplete_matches.size() > 0 \
 			and _autocomplete_matches[0].length() > _entry.text.length() \
@@ -1023,9 +1060,12 @@ func _show_console() -> void:
 	if not _control.visible and enabled:
 		_control.show()
 		_control_block.show()
-		_was_already_paused = get_tree().paused
-		if not _was_already_paused:
-			get_tree().paused = true
+		if _options.pause_when_open:
+			_was_already_paused = get_tree().paused
+		
+		if _options.pause_when_open:
+			if not _was_already_paused:
+				get_tree().paused = true
 		_previous_gui_focus = get_viewport().gui_get_focus_owner()
 		_entry.grab_focus()
 		toggled.emit(true)
@@ -1045,9 +1085,14 @@ func _hide_console() -> void:
 ## Returns true if the callable can be registered as a command.
 func _validate_callable(p_callable: Callable) -> bool:
 	var method_info: Dictionary = TinyUtil.get_method_info(p_callable)
-	if method_info.is_empty():
+	if p_callable.is_standard() and method_info.is_empty():
 		push_error("TinyConsole: Couldn't find method info for: " + p_callable.get_method())
 		return false
+	if p_callable.is_custom() and not method_info.is_empty() \
+		and method_info.get("name") == "<anonymous lambda>" \
+		and p_callable.get_bound_arguments_count() > 0:
+			push_error("TinyConsole: bound anonymous functions are unsupported")
+			return false
 
 	var ret := true
 	for arg in method_info.args:
@@ -1057,36 +1102,35 @@ func _validate_callable(p_callable: Callable) -> bool:
 	return ret
 
 
+func _validate_autocomplete_result(p_result: Variant, p_command: String) -> bool:
+	if typeof(p_result) < TYPE_ARRAY:
+		push_error("TinyConsole: Argument autocomplete source failed: Expecting array but got: ",
+				type_string(typeof(p_result)), " command: ", p_command)
+		return false
+	return true
+
+
 func _fill_entry(p_line: String) -> void:
 	_entry.text = p_line
 	_entry.set_caret_column(p_line.length())
 
 
-func _fill_entry_from_history() -> void:
-	_hist_idx = wrapi(_hist_idx, -1, _history.size())
-	if _hist_idx < 0:
-		_fill_entry("")
-	else:
-		_fill_entry(_history[_history.size() - _hist_idx - 1])
-	_clear_autocomplete()
-	_update_autocomplete()
-
-
-func _push_history(p_line: String) -> void:
-	var idx: int = _history.find(p_line)
-	if idx != -1:
-		_history.remove_at(idx)
-	_history.append(p_line)
-	_hist_idx = -1
-
-
 func _on_entry_text_submitted(p_command: String) -> void:
-	_clear_autocomplete()
-	_fill_entry("")
-	execute_command(p_command)
-	_update_autocomplete()
+	if _history_gui.visible:
+		_history_gui.visible = false
+		_clear_autocomplete()
+		_fill_entry(_history_gui.get_current_text())
+		_update_autocomplete()
+	else:
+		_clear_autocomplete()
+		_fill_entry("")
+		execute_command(p_command)
+		_update_autocomplete()
 
 
 func _on_entry_text_changed() -> void:
 	_clear_autocomplete()
-	_update_autocomplete()
+	if not _entry.text.is_empty():
+		_update_autocomplete()
+	else:
+		_history_iter.reset()

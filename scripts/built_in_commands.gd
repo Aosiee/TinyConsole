@@ -23,6 +23,8 @@ static func register_commands() -> void:
 	TinyConsole.register_command(cmd_fps_max, "fps_max", "limit framerate", "Built In|Performance")
 	TinyConsole.register_command(cmd_vsync, "vsync", "adjust V-Sync", "Built In|Performance")
 
+	TinyConsole.register_command(TinyConsole.erase_history, "erase_history", "erases current history and persisted history")
+	
 	TinyConsole.add_argument_autocomplete_source("help", 1, TinyConsole.get_command_names.bind(true))
 
 static func _alias_usage() -> void:

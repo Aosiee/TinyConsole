@@ -38,7 +38,7 @@ static func get_method_info(p_callable: Callable) -> Dictionary:
 ## Finds the most similar string in an array.
 static func fuzzy_match_string(p_string: String, p_max_edit_distance: int, p_array) -> String:
 	if typeof(p_array) < TYPE_ARRAY:
-		push_error("LimboConsole: Internal error: p_array is not an array")
+		push_error("TinyConsole: Internal error: p_array is not an array")
 		return ""
 	if p_array.size() == 0:
 		return ""

@@ -1,7 +1,6 @@
 extends TextEdit
 ## CommandEntry
 
-
 signal text_submitted(command_line: String)
 signal autocomplete_requested()
 
