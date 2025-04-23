@@ -235,7 +235,7 @@ func print_line(p_line: String, stdout: bool = true) -> void:
 
 	_redraw_visible_lines()
 
-	if stdout:
+	if stdout and not p_line.is_empty():
 		print(TinyUtil.bbcode_strip(p_line))
 
 ## Registers a new command for the specified callable. [br]
