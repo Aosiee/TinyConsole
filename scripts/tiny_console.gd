@@ -965,7 +965,7 @@ func _estimate_visible_line_count() -> void:
 	dummy.bbcode_enabled = true
 	dummy.size = _output.size
 	dummy.append_text("Line 1\nLine 2")
-	add_child(dummy)
+	add_child.call_deferred(dummy)
 	
 	await get_tree().process_frame
 	await get_tree().process_frame
