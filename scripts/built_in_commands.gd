@@ -202,13 +202,12 @@ static func cmd_fullscreen() -> void:
 		TinyConsole.get_viewport().mode = Window.MODE_WINDOWED
 		TinyConsole.info("Window switched to windowed mode.")
 
-
 static func cmd_help(p_command_name: String = "") -> Error:
 	if p_command_name.is_empty():
-		TinyConsole.print_line(TinyConsole.format_tip("Type %s to list all available commands." %
-				[TinyConsole.format_name("commands")]), false)
-		TinyConsole.print_line(TinyConsole.format_tip("Type %s to get more info about the command." %
-				[TinyConsole.format_name("help command")]), false)
+		TinyConsole.print_line(TinyConsole.format_tip("Type %s to list all available commands." % 
+			[TinyConsole.format_name("commands")]), false)
+		TinyConsole.print_line(TinyConsole.format_tip("Type %s to get more info about the command." % 
+			[TinyConsole.format_name("help command")]), false)
 		return OK
 	else:
 		return TinyConsole.usage(p_command_name)

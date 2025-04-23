@@ -91,15 +91,23 @@ func _init() -> void:
 
 	if _options.disable_in_release:
 		enabled = OS.is_debug_build()
+	
+	if _options.enable_commandline_override:
+		var cmdArgs = OS.get_cmdline_args()
+		var hasConsole = "--showConsole" in cmdArgs
+		if enabled == false and hasConsole:
+			enabled = true
 
 	_entry.text_submitted.connect(_on_entry_text_submitted)
 	_entry.text_changed.connect(_on_entry_text_changed)
-	
+
+	if _options.greet_user:
+		_greet()
+
 func _ready() -> void:
 	set_process(false) # Note, if you do it in _init(), it won't actually stop it for some reason.
 	BuiltInCommands.register_commands()
-	if _options.greet_user:
-		_greet()
+	_showHelp()
 	_add_aliases_from_config.call_deferred()
 	_run_autoexec_script.call_deferred()
 	_entry.autocomplete_requested.connect(_autocomplete)
@@ -417,7 +425,6 @@ func execute_script(p_file: String, p_silent: bool = true) -> void:
 func format_tip(p_text: String) -> String:
 	return "[i][color=" + _output_debug_color.to_html() + "]" + p_text + "[/color][/i]"
 
-
 ## Formats the command name for display.
 func format_name(p_name: String) -> String:
 	return "[color=" + _output_command_mention_color.to_html() + "]" + p_name + "[/color]"
@@ -602,7 +609,6 @@ func _init_theme() -> void:
 	_entry.syntax_highlighter.command_not_found_color = _entry_command_not_found_color
 	_entry.syntax_highlighter.text_color = _entry_text_color
 
-
 func _greet() -> void:
 	var message: String = _options.greeting_message
 	message = message.format({
@@ -615,9 +621,10 @@ func _greet() -> void:
 			info("")
 		else:
 			info("[b]" + message + "[/b]")
+	
+func _showHelp() -> void:
 	BuiltInCommands.cmd_help()
 	info(format_tip("-----"), false)
-
 
 func _add_aliases_from_config() -> void:
 	for alias in _options.aliases:
