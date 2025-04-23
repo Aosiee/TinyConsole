@@ -155,9 +155,10 @@ func _handle_command_input(p_event: InputEvent) -> void:
 
 func _handle_history_input(p_event: InputEvent):
 	# Allow tab complete (reverse)
-	if p_event.is_action_pressed("tiny_auto_complete_reverse"):
+	if p_event.keycode == KEY_TAB and p_event.is_pressed() and p_event.shift_pressed:
 		_reverse_autocomplete()
 		get_viewport().set_input_as_handled()
+
 	# Allow tab complete (forward)
 	elif p_event.keycode == KEY_TAB and p_event.is_pressed():
 		_autocomplete()
@@ -169,7 +170,6 @@ func _handle_history_input(p_event: InputEvent):
 
 	# Make sure entry is always focused
 	_entry.grab_focus()
-
 
 func _input(p_event: InputEvent) -> void:
 	if p_event.is_action_pressed("tiny_console_toggle"):
