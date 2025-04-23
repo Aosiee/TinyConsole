@@ -94,7 +94,7 @@ func _init() -> void:
 	
 	if _options.enable_commandline_override:
 		var cmdArgs = OS.get_cmdline_args()
-		var hasConsole = "--showConsole" in cmdArgs
+		var hasConsole = "--enableConsole" in cmdArgs
 		if enabled == false and hasConsole:
 			enabled = true
 
