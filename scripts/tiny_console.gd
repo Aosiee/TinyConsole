@@ -246,6 +246,7 @@ func toggle_history() -> void:
 func clear_console() -> void:
 	_output.text = ""
 	_log_lines.clear()
+	_update_scrollbar()
 	scroll_to_bottom()
 
 ## Erases the history that is persisted to the disk
