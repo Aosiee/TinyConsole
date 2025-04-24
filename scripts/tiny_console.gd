@@ -24,22 +24,18 @@ var enabled: bool = true:
 			set_process(false)
 			_hide_console()
 
+# === GUI Nodes ===
 var _control : Control
 var _history_gui: HistoryGui
 var _control_block : Control
-var _scroll_container : ScrollContainer
-var _vbox : VBoxContainer
-var _hbox : HBoxContainer
 
 var _output : RichTextLabel
 var _scrollbar : VScrollBar
 
-var _spacer_top : Control
-var _spacer_bottom : Control
-
 var _entry : CommandEntry
 var _previous_gui_focus : Control
 
+# === Virtual Scroll Variables ===
 var _log_lines: Array[String] = []
 var _visible_line_count: int = 10
 var _cached_line_height := -1.0
@@ -47,7 +43,7 @@ var _scroll_index: int = 0
 var _user_scrolled: bool = false
 var _auto_scroll_enabled := true
 
-# Theme colors
+# === Theme Colours ===
 var _output_command_color: Color
 var _output_command_mention_color: Color
 var _output_error_color: Color
@@ -59,6 +55,7 @@ var _entry_hint_color: Color
 var _entry_command_found_color: Color
 var _entry_command_not_found_color: Color
 
+# === Active Variables ===
 var _options : ConsoleOptions
 var _commands = [] # command_name => Callable
 var _aliases : Dictionary # alias_name => command_to_run: PackedStringArray
@@ -69,9 +66,12 @@ var _history_iter: CommandHistory.WrappingIterator
 var _hist_idx: int = -1
 var _autocomplete_matches: PackedStringArray
 var _eval_inputs: Dictionary
+
+# === States ===
 var _silent: bool = false
 var _was_already_paused: bool = false
 
+# === Open / Close Variables ===
 var _open_t: float = 0.0
 var _open_speed: float = 5.0
 var _is_open: bool = false
@@ -619,7 +619,6 @@ func _build_gui() -> void:
 	hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hbox.mouse_filter = Control.MOUSE_FILTER_PASS
 	vbox.add_child(hbox)
-	_hbox = hbox
 
 	# === Console Output ===
 	_output = RichTextLabel.new()
