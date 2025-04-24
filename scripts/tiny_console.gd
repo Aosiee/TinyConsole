@@ -29,6 +29,7 @@ var _history_gui: HistoryGui
 var _control_block : Control
 var _scroll_container : ScrollContainer
 var _vbox : VBoxContainer
+var _hbox : HBoxContainer
 
 var _output : RichTextLabel
 var _scrollbar : VScrollBar
@@ -190,10 +191,12 @@ func _process(delta: float) -> void:
 		_open_t = move_toward(_open_t, 1.0, _open_speed * delta * 1.0/Engine.time_scale)
 		if _open_t == 1.0:
 			done_sliding = true
+			recalculateHeight()
 	else: # We close faster than opening.
 		_open_t = move_toward(_open_t, 0.0, _open_speed * delta * 1.5 * 1.0/Engine.time_scale)
 		if is_zero_approx(_open_t):
 			done_sliding = true
+			recalculateHeight()
 
 	var eased := ease(_open_t, -1.75)
 	var new_y := remap(eased, 0, 1, -_control.size.y, 0)
@@ -574,6 +577,13 @@ func set_eval_base_instance(object):
 func get_eval_base_instance():
 	return _eval_inputs.get("_base_instance")
 
+# Recalculate visible lines and scroll behavior
+func recalculateHeight() -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_estimate_visible_line_count()
+	_update_scrollbar()
+	_redraw_visible_lines()
 
 # *** PRIVATE
 
@@ -606,8 +616,10 @@ func _build_gui() -> void:
 	# === Horizontal layout (output + scrollbar) ===
 	var hbox := HBoxContainer.new()
 	hbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hbox.mouse_filter = Control.MOUSE_FILTER_PASS
 	vbox.add_child(hbox)
+	_hbox = hbox
 
 	# === Console Output ===
 	_output = RichTextLabel.new()
@@ -617,9 +629,10 @@ func _build_gui() -> void:
 	_output.scroll_following = false
 	_output.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_output.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_output.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	_output.focus_mode = Control.FOCUS_ALL
 	_output.mouse_filter = Control.MOUSE_FILTER_PASS
-	_output.custom_minimum_size.y = 300
+	#_output.custom_minimum_size.y = 300
 	_output.connect("gui_input", Callable(self, "_on_output_gui_input"))
 	hbox.add_child(_output)
 
@@ -1002,14 +1015,11 @@ func _on_output_gui_input(event: InputEvent) -> void:
 		_redraw_visible_lines()
 
 func _on_console_resized() -> void:
-	# Recalculate visible lines and scroll behavior
-	_estimate_visible_line_count()
-	_update_scrollbar()
-	_redraw_visible_lines()
+	recalculateHeight()
 
 func _estimate_visible_line_count() -> void:
 	if _cached_line_height > 0.0:
-		_visible_line_count = max(int(_output.size.y / _cached_line_height), 1)
+		_visible_line_count = max(int(_output.size.y / _cached_line_height), 1) + 10
 		return
 
 	# Measure line height using dummy lines
